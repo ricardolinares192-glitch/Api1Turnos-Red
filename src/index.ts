@@ -4,10 +4,11 @@ import { createServer } from 'node:http'; // Importamos el servidor nativo
 import { Server } from 'socket.io'; // Importamos Socket.IO
 import turnoRoutes from './routes/turno.routes.js';
 import medicoRoutes from './routes/medico.routes.js';
-import { errorHandler } from './middlewares/errorHandler.ts';
+import { errorHandler } from './middlewares/errorHandler.js'; // Cambiado a .js por consistencia
 import { TurnoService } from './services/turno.service.js';
 import { TurnoCrudo, Turno } from './models/turno.model.js';
 import { turnoEmitter } from './events/turno.events.js';
+import { GeneralController } from './controllers/general.controller.js'; // <-- NUEVO
 
 process.loadEnvFile();
 const puerto = process.env.PORT || 3000;
@@ -24,9 +25,22 @@ const io = new Server(httpServer, {
 });
 
 app.use(express.json());
+
+// ==========================================
+// NUEVO: Endpoint de bienvenida (Hello World)
+// ==========================================
+app.get('/', GeneralController.helloWorld);
+
+// Rutas principales de la API
 app.use('/turnos', turnoRoutes);
 app.use('/medicos', medicoRoutes);
 
+// ==========================================
+// NUEVO: Middleware para rutas no encontradas (404)
+// ==========================================
+app.use(GeneralController.notFound);
+
+// Middleware de manejo de errores global (Siempre debe ir debajo de todas las rutas)
 app.use(errorHandler); 
 
 function normalizarTurnos(turnosCrudos: TurnoCrudo[]): Turno[] {
@@ -59,7 +73,6 @@ io.on('connection', (socket) => {
 
 turnoEmitter.on('turno:creado', (turno: Turno) => {
   console.log(`[EVENTO INTERNO] 🟢 Nuevo turno para: ${turno.paciente}`);
-  // Retransmitimos en tiempo real a los clientes (con el nombre requerido)
   io.emit('turno:nuevo', turno);
 });
 
@@ -83,7 +96,6 @@ async function iniciarServidor() {
     const turnosProcesados = normalizarTurnos(turnosCrudos);
     TurnoService.cargarTurnosIniciales(turnosProcesados);
     
-    // IMPORTANTE: Ahora usamos httpServer en lugar de app para escuchar el puerto
     httpServer.listen(puerto, () => {
       console.log(`🚀 Servidor Express y WebSockets funcionando en http://localhost:${puerto}`);
     });
