@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cliente Socket.IO</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+    <h2>Eventos en Tiempo Real (Socket.IO)</h2>
+    <ul id="eventos"></ul>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        const lista = document.getElementById('eventos');
+
+        function agregarEvento(texto, color) {
+            const li = document.createElement('li');
+            li.style.color = color;
+            li.innerText = texto;
+            lista.appendChild(li);
+        }
+
+        socket.on('connect', () => agregarEvento('Conectado al servidor', 'green'));
+        socket.on('turno:nuevo', (data) => agregarEvento(`NUEVO TURNO: ${data.paciente}`, 'blue'));
+        socket.on('turno:actualizado', (data) => agregarEvento(`TURNO MODIFICADO: ID ${data.id}`, 'orange'));
+        socket.on('turno:eliminado', (id) => agregarEvento(`TURNO ELIMINADO: ID ${id}`, 'red'));
+    </script>
+</body>
+</html>

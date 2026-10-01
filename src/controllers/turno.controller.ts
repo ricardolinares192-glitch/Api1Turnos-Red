@@ -1,62 +1,89 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { TurnoService } from '../services/turno.service.js';
 
-export const TurnoController = {
-  obtenerTodos: (req: Request, res: Response) => {
+export class TurnoController {
+  
+  static async obtenerTodos(req: Request, res: Response, next: NextFunction) {
     try {
-      const turnos = TurnoService.obtenerTodos();
+      // Le pasamos req.query al servicio para que filtre
+      const turnos = await TurnoService.obtenerTodos(req.query);
       res.status(200).json(turnos);
     } catch (error) {
-      res.status(500).json({ error: 'Error interno del servidor' });
+      next({
+        status: 500,
+        message: "Error al obtener los turnos",
+        code: "INTERNAL_ERROR"
+      });
     }
-  },
-
-  obtenerPorId: (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const turno = TurnoService.obtenerPorId(id);
-    if (!turno) {
-      res.status(404).json({ error: 'Turno no encontrado' });
-      return;
-    }
-    res.status(200).json(turno);
-  },
-
-  crear: (req: Request, res: Response) => {
-    try {
-      const nuevoTurno = req.body;
-      if (!nuevoTurno.paciente || !nuevoTurno.id) {
-        res.status(400).json({ error: 'Faltan datos obligatorios' });
-        return;
-      }
-      const creado = TurnoService.crear(nuevoTurno);
-      res.status(201).json(creado);
-    } catch (error) {
-      res.status(500).json({ error: 'Error al crear el turno' });
-    }
-  },
-
-  actualizar: (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const datos = req.body;
-    if (Object.keys(datos).length === 0) {
-      res.status(400).json({ error: 'No se enviaron datos para actualizar' });
-      return;
-    }
-    const actualizado = TurnoService.actualizar(id, datos);
-    if (!actualizado) {
-      res.status(404).json({ error: 'Turno no encontrado' });
-      return;
-    }
-    res.status(200).json(actualizado);
-  },
-
-  eliminar: (req: Request, res: Response) => {
-    const id = parseInt(req.params.id);
-    const eliminado = TurnoService.eliminar(id);
-    if (!eliminado) {
-      res.status(404).json({ error: 'Turno no encontrado' });
-      return;
-    }
-    res.status(200).json({ mensaje: 'Turno eliminado correctamente' });
   }
-};
+
+  static async obtenerPorId(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const turno = await TurnoService.obtenerPorId(id);
+      
+      if (!turno) {
+        return next({
+          status: 404,
+          message: "Turno no encontrado",
+          code: "NOT_FOUND"
+        });
+      }
+      
+      res.status(200).json(turno);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async crear(req: Request, res: Response, next: NextFunction) {
+    try {
+      const nuevoTurno = await TurnoService.crear(req.body);
+      res.status(201).json(nuevoTurno);
+    } catch (error) {
+      next({
+        status: 400,
+        message: "Error al crear el turno",
+        code: "BAD_REQUEST"
+      });
+    }
+  }
+
+  static async actualizar(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const turnoActualizado = await TurnoService.actualizar(id, req.body);
+      
+      if (!turnoActualizado) {
+        return next({
+          status: 404,
+          message: "Turno no encontrado para actualizar",
+          code: "NOT_FOUND"
+        });
+      }
+      
+      res.status(200).json(turnoActualizado);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async eliminar(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      const eliminado = await TurnoService.eliminar(id);
+      
+      if (!eliminado) {
+        return next({
+          status: 404,
+          message: "Turno no encontrado para eliminar",
+          code: "NOT_FOUND"
+        });
+      }
+      
+      res.status(204).send(); // 204 significa "sin contenido", se usa al borrar
+    } catch (error) {
+      next(error);
+    }
+  }
+}

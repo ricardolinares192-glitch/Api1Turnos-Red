@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import { createServer } from 'node:http'; // Importamos el servidor nativo
 import { Server } from 'socket.io'; // Importamos Socket.IO
 import turnoRoutes from './routes/turno.routes.js';
+import medicoRoutes from './routes/medico.routes.js';
+import { errorHandler } from './middlewares/errorHandler.ts';
 import { TurnoService } from './services/turno.service.js';
 import { TurnoCrudo, Turno } from './models/turno.model.js';
 import { turnoEmitter } from './events/turno.events.js';
@@ -23,6 +25,9 @@ const io = new Server(httpServer, {
 
 app.use(express.json());
 app.use('/turnos', turnoRoutes);
+app.use('/medicos', medicoRoutes);
+
+app.use(errorHandler); 
 
 function normalizarTurnos(turnosCrudos: TurnoCrudo[]): Turno[] {
   const turnosAceptados: Turno[] = [];
